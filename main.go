@@ -13,7 +13,9 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"time"
 
 	"github.com/Alfrederson/NanoIOT/pubsubber"
 	"github.com/gofiber/fiber/v2"
@@ -63,12 +65,13 @@ func Device(a *fiber.App) {
 
 	a.Post("/dev/:id", func(c *fiber.Ctx) error {
 		deviceId := c.Params("id")
-		message := string(c.Body())
 
-		// publica assim: torradeira: Temperatura 10C Umidade 20%
+		message := fmt.Sprintf("%v %s: %s", time.Now(), deviceId, string(c.Body()))
+
+		// publica assim: torradeira: Temperatura=10C Umidade=20% Coisa=X
 
 		pubsubber.Publish("/dev/"+deviceId, message)
-		pubsubber.Publish("/dev", deviceId+":"+message)
+		pubsubber.Publish("/dev", message)
 
 		return c.SendString("ok")
 	})
