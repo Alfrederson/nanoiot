@@ -40,6 +40,17 @@
             </div>
         </div>
         <script>
+            function formatTime(timeStamp){
+
+                let day = String(timeStamp.getDate()).padStart(2, '0');
+                let month = String(timeStamp.getMonth() + 1).padStart(2, '0');
+                let year = timeStamp.getFullYear();
+                let hours = String(timeStamp.getHours()).padStart(2, '0');
+                let minutes = String(timeStamp.getMinutes()).padStart(2, '0');
+                let seconds = String(timeStamp.getSeconds()).padStart(2, '0');
+
+                return `${hours}:${minutes}:${seconds}`;
+            }
             let messages = []
             // a gente tem um display.
             const display = document.getElementById("display")
@@ -50,13 +61,17 @@
                     console.log("listening...")
                     let result = await fetch("/dev/")
                     let response = await result.text()
+                    let obj = JSON.parse(response)
 
-                    messages.unshift(response)
+                    messages.unshift(obj)
 
                     if(messages.length == 10){
                         messages.pop()
                     }
-                    display.innerHTML = messages.join("<br/>")
+                    display.innerHTML = messages.map( message => {
+                        let timeStamp = new Date(message.time)
+                        return formatTime(timeStamp) + " : " + message.device+" : "+message.data
+                    }).join("<br/>")
                     requestAnimationFrame(listen)
                 }catch(e){
                     console.log("timeout. retrying...")

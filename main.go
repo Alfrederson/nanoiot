@@ -13,7 +13,7 @@
 package main
 
 import (
-	"fmt"
+	"encoding/json"
 	"log"
 	"time"
 
@@ -21,43 +21,19 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func SubHandler(c *fiber.Ctx) error {
-	c.Set("Cache-Control", "no-cache")
-	c.Set("Connection", "keep-alive")
-	topic := c.Params("topic")
-	client := c.Params("clientid")
-	// o parâmetro clientid serve literalmente parada.
-	// não sei por que, mas sem ele, se eu tenho 2 subscribers no mesmo tópico ao mesmo tempo,
-	// o segundo leva uns 15 segundos pra começar a escutar.
-	// tem algum motivo interno pra isso acontecer porque é a mesma coisa com o gin.
-	log.Println(client, ": subscreveu a  ", topic)
-	messageChannel := make(chan string, 1)
-	// zumbi, mas quando estava com o gin isso servia pra poder remover o canal
-	// quando o cliente desconectava.
-	_, _ = pubsubber.Subscribe(topic, messageChannel)
-	return c.SendString(<-messageChannel)
+type Message struct {
+	Time   time.Time `json:"time"`
+	Device string    `json:"device"`
+	Data   string    `json:"data"`
 }
 
-func PubHandler(c *fiber.Ctx) error {
-	topic := c.Params("topic")
-	message := c.Body()
-	pubsubber.Publish(topic, string(message))
-	return c.SendString("mensagem publicada")
-}
-
-func PubHandlerGet(c *fiber.Ctx) error {
-	type MessageQuery struct {
-		Message string
+func (m *Message) ToJSON() string {
+	jsonData, err := json.Marshal(m)
+	if err != nil {
+		// Handle the error, return an error string, or do something else
+		return ""
 	}
-
-	topic := c.Params("topic")
-	message := MessageQuery{}
-	if err := c.QueryParser(&message); err != nil {
-		return c.Status(503).SendString("")
-	}
-	pubsubber.Publish(topic, message.Message)
-	log.Println(topic, "<-", message.Message)
-	return c.SendString("ok")
+	return string(jsonData)
 }
 
 func Device(a *fiber.App) {
@@ -66,10 +42,18 @@ func Device(a *fiber.App) {
 	a.Post("/dev/:id", func(c *fiber.Ctx) error {
 		deviceId := c.Params("id")
 
-		message := fmt.Sprintf("%v %s: %s", time.Now(), deviceId, string(c.Body()))
+		msg := Message{
+			Time:   time.Now(),
+			Device: deviceId,
+			Data:   string(c.Body()),
+		}
+
+		message := msg.ToJSON()
 
 		// publica assim: torradeira: Temperatura=10C Umidade=20% Coisa=X
-
+		// recebe assim:
+		//
+		// {"time" : horário, "device" : id, "data" : aquilo que eu recebi}
 		pubsubber.Publish("/dev/"+deviceId, message)
 		pubsubber.Publish("/dev", message)
 
