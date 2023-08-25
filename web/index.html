@@ -35,7 +35,6 @@
                     <h1>NanoMon</h1>
                 </div>
                 <div class="card-body" id="display">
-                    aguardando leituras...
                 </div>
             </div>
         </div>
@@ -51,10 +50,21 @@
 
                 return `${hours}:${minutes}:${seconds}`;
             }
-            let messages = []
+            let messages = [
+                {{range $i, $data := .LastMessages}}
+                    { time : {{time $data.Time }}, device : {{$data.Device}}, data : {{$data.Data}} },
+                {{end}}        
+            ]
             // a gente tem um display.
             const display = document.getElementById("display")
             // a gente escuta no endereço /dev/
+
+            function renderMessages(){
+                display.innerHTML = messages.map( message => {
+                        let timeStamp = new Date(message.time)
+                        return formatTime(timeStamp) + " : " + message.device+" : "+message.data
+                    }).join("<br/>")
+            }
 
             async function listen(){
                 try{
@@ -64,14 +74,9 @@
                     let obj = JSON.parse(response)
 
                     messages.unshift(obj)
+                    if(messages.length > 10) messages.pop()
 
-                    if(messages.length == 10){
-                        messages.pop()
-                    }
-                    display.innerHTML = messages.map( message => {
-                        let timeStamp = new Date(message.time)
-                        return formatTime(timeStamp) + " : " + message.device+" : "+message.data
-                    }).join("<br/>")
+                    renderMessages()
                     requestAnimationFrame(listen)
                 }catch(e){
                     console.log("timeout. retrying...")
@@ -79,8 +84,8 @@
                 }
             }
 
+            renderMessages()
             listen()
-
         </script>
     </body>
 </html>
