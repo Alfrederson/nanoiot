@@ -30,11 +30,12 @@
     </head>
     <body style="overflow-x:hidden" class="p-3">
         <div class="container" style="max-width:768px">
+            <h1>NanoMon</h1>
             <div class="card">
-                <div class="card-header">
-                    <h1>NanoMon</h1>
+                <div class="card-header" id="displays">
                 </div>
-                <div class="card-body" id="display">
+
+                <div class="card-body" style="font-family:monospace" id="log">
                 </div>
             </div>
         </div>
@@ -55,17 +56,35 @@
                     { time : {{time $data.Time }}, device : {{$data.Device}}, data : {{$data.Data}} },
                 {{end}}        
             ]
-            // a gente tem um display.
-            const display = document.getElementById("display")
-            // a gente escuta no endereço /dev/
+            // a gente tem um log.
+            const log = document.getElementById("log")
+
+            // a gente tem um negócio com a última leitura.
+            const displays = document.getElementById("displays")
 
             function renderMessages(){
-                display.innerHTML = messages.map( message => {
+                log.innerHTML = messages.map( message => {
                         let timeStamp = new Date(message.time)
-                        return formatTime(timeStamp) + " : " + message.device+" : "+message.data
+                        return formatTime(timeStamp) + " " + message.device+" "+message.data
                     }).join("<br/>")
             }
 
+            function renderMessage(deviceId, data){
+                // <span class="badge bg-dark">torradeira 16C</span>
+                let badge = displays.querySelector("#"+deviceId)
+                if(!badge){
+                    console.log("new device "+deviceId)
+                    badge = document.createElement('span')
+                    badge.className = 'badge bg-dark'
+                    badge.id = deviceId
+                    displays.appendChild(badge)
+                }
+                badge.textContent = deviceId + " "+data;
+                console.log(deviceId+" "+data)
+            }
+
+            // a gente escuta no endereço /dev/ que é para onde todos os dispositivos
+            // enviam mensagens.
             async function listen(){
                 try{
                     console.log("listening...")
@@ -77,8 +96,10 @@
                     if(messages.length > 10) messages.pop()
 
                     renderMessages()
+                    renderMessage(obj.device,obj.data)
                     requestAnimationFrame(listen)
                 }catch(e){
+                    console.log(e)
                     console.log("timeout. retrying...")
                     setTimeout(listen,1000)
                 }
