@@ -46,7 +46,7 @@ func Device(a *fiber.App, d *Dashboard) {
 	// TODO: usar authorization header pra fazer autenticação dos dispositivos.
 
 	a.Post("/dev/:id", func(c *fiber.Ctx) error {
-		deviceId := c.Params("id")
+		deviceId := string(c.Params("id"))
 		msg := Message{
 			Time:   time.Now(),
 			Device: deviceId,
@@ -56,12 +56,13 @@ func Device(a *fiber.App, d *Dashboard) {
 		d.LastMessages.Push(msg)
 
 		message := msg.ToJSON()
+		pubsubber.Publish("/dev/"+deviceId, message)
+		pubsubber.Publish("/dev", message)
+
 		// publica assim: torradeira: Temperatura=10C Umidade=20% Coisa=X
 		// recebe assim:
 		//
 		// {"time" : horário, "device" : id, "data" : aquilo que eu recebi}
-		pubsubber.Publish("/dev/"+deviceId, message)
-		pubsubber.Publish("/dev", message)
 
 		return c.SendString("ok")
 	})
@@ -94,8 +95,8 @@ func main() {
 
 	dashboard := &Dashboard{
 		LastMessages: Stack{
-			values:   make([]interface{}, 0, 100),
-			capacity: 100,
+			values:   make([]interface{}, 0, 10),
+			capacity: 10,
 		},
 	}
 
@@ -111,7 +112,8 @@ func main() {
 	})
 
 	app := fiber.New(fiber.Config{
-		Views: engine,
+		Views:     engine,
+		Immutable: true,
 	})
 
 	Device(app, dashboard)
