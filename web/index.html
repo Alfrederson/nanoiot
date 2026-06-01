@@ -5,6 +5,8 @@
         <meta name="theme-color" content="#000" >
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta http-equiv="X-UA-Compatible" content="ie=edge">
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
         <link rel="stylesheet" href="https://bootswatch.com/5/flatly/bootstrap.min.css">
         <title>🔌 NanoMon</title>
         <style>
@@ -34,7 +36,6 @@
             <div class="card">
                 <div class="card-header" id="displays">
                 </div>
-
                 <div class="card-body" style="font-family:monospace" id="log">
                 </div>
             </div>
@@ -62,20 +63,31 @@
             // a gente tem um negócio com a última leitura.
             const displays = document.getElementById("displays")
 
+            const MAX_POINTS = 10
+
+            let chart
+
+            let timeseries = new Map()
+            let max_time = 0
+            let min_time = Date.now()
+
             function renderMessages(){
                 log.innerHTML = messages.map( message => {
                         let timeStamp = new Date(message.time)
                         return formatTime(timeStamp) + " " + message.device+" "+message.data
                     }).join("<br/>")
+
+                messages.forEach(m => {
+                    renderMessage(m.device,m.data)
+                })
             }
 
             function renderMessage(deviceId, data){
-                // <span class="badge bg-dark">torradeira 16C</span>
                 let badge = displays.querySelector("#"+deviceId)
                 if(!badge){
                     console.log("new device "+deviceId)
                     badge = document.createElement('span')
-                    badge.className = 'badge bg-dark'
+                    badge.className = 'badge bg-dark mx-2'
                     badge.id = deviceId
                     displays.appendChild(badge)
                 }
@@ -94,7 +106,7 @@
 
                     messages.unshift(obj)
                     if(messages.length > 10) messages.pop()
-
+                    
                     renderMessages()
                     renderMessage(obj.device,obj.data)
                     requestAnimationFrame(listen)

@@ -94,8 +94,8 @@ func main() {
 
 	dashboard := &Dashboard{
 		LastMessages: Stack{
-			values:   make([]interface{}, 0, 10),
-			capacity: 10,
+			values:   make([]interface{}, 0, 100),
+			capacity: 100,
 		},
 	}
 
